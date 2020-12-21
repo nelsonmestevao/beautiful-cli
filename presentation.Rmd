@@ -1,0 +1,217 @@
+---
+title: "Make beautiful command line interfaces"
+author: Nelson Estevão
+date: "`r format(Sys.Date(), '%d/%m/%Y')`"
+output: 
+    slidy_presentation:
+        theme: readable
+        footer: "CeSIUM - Centro de Estudantes de Eng. Informática da UMinho"
+    ioslides_presentation:
+        incremental: true
+        widescreen: true
+        smaller: true
+---
+
+# please
+
+# What's a CLI? {.build}
+
+> It is the textual interface that allows us to interact with a program at its simplest level.
+
+## Examples
+
+```
+Usage: wc [OPTION]... [FILE]...
+  or:  wc [OPTION]... --files0-from=F
+Print newline, word, and byte counts for each FILE, and a total line if
+more than one FILE is specified.  A word is a non-zero-length sequence of
+characters delimited by white space.
+
+With no FILE, or when FILE is -, read standard input.
+
+The options below may be used to select which counts are printed, always in
+the following order: newline, word, character, byte, maximum line length.
+  -c, --bytes            print the byte counts
+  -m, --chars            print the character counts
+  -l, --lines            print the newline counts
+      --files0-from=F    read input from the files specified by
+                           NUL-terminated names in file F;
+                           If F is - then read names from standard input
+  -L, --max-line-length  print the maximum display width
+  -w, --words            print the word counts
+      --help     display this help and exit
+      --version  output version information and exit
+```
+
+# Where did I came from
+
+# C with `argp`
+
+##
+
+```C
+const char *argp_program_version = "mkfromtemplate 0.1.0";
+/* Program documentation. */
+static char doc[] =
+    "mkfromtemplate -- a program to do the initial setup of projects from "
+    "templates";
+/* A description of the arguments we accept. */
+static char args_doc[] = "<PROJECT NAME>";
+/* The options we understand. */
+static struct argp_option options[] = {
+    {"config", 'c', "<CONFIG>", 0, "Configuration to read at program start", 0},
+    {"template", 't', "<FILE>", 0, "The template file to use parse", 0},
+    {"debug", 'd', 0, 0, "Output debug information", 0},
+    {"output", 'o', "<OUTPUT_DIR>", 0, "Where should the project be created",
+     0},
+    {0}};
+/* Used by main to communicate with parse_opt. */
+struct arguments {
+    char *project_name;
+    char *configuration_file;
+    char *template_file;
+    char *output_dir;
+    int debug;
+};
+/* Our argp parser. */
+static struct argp argp = {options, parse_opt, args_doc, doc, NULL, NULL, NULL};
+```
+
+##
+
+```C
+static error_t parse_opt(int key, char *arg, struct argp_state *state) {
+    struct arguments *arguments = state->input; /* Parse a single argument option. */
+    switch (key) {
+        case 't':
+            arguments->template_file = arg;
+            break;
+        case 'o':
+            arguments->output_dir = arg;
+            break;
+        case 'd':
+            arguments->debug = 1;
+            break;
+        case ARGP_KEY_ARG:
+            if (state->arg_num >= 1) {
+                /* Too many arguments. */
+                argp_usage(state);
+            }
+            arguments->project_name = arg;
+            break;
+        case ARGP_KEY_END:
+            if (state->arg_num < 1) {
+                /* Not enough arguments. */
+                argp_usage(state);
+            }
+            break;
+        default:
+            return ARGP_ERR_UNKNOWN;
+    }
+    return 0;
+}
+```
+
+# Java with `JCommander`
+
+##
+
+```java
+public final class App {
+    @Parameter(
+            names = {"-h", "--help"},
+            help = true,
+            description = "Displays help information")
+    private boolean help = false;
+
+    @Parameter(
+            names = {"-a", "--address", "--hostname"},
+            description = "Hostname address")
+    private String address =
+            Optional.ofNullable(System.getenv("APP_SERVER_HOSTNAME")).orElse("127.0.0.1");
+
+    @Parameter(
+            names = {"-p", "--port"},
+            description = "Port number")
+    private int port =
+            Integer.parseInt(Optional.ofNullable(System.getenv("APP_SERVER_PORT")).orElse("8080"));
+
+    @Parameter(
+            names = {"-op", "--peers"},
+            variableArity = true,
+            description = "List of peers")
+    private List<String> peers = new ArrayList<>();
+}
+```
+
+##
+
+```java
+public void parseArguments(final String[] args) {
+        JCommander commands = new JCommander(this);
+        commands.setProgramName(PROGRAM_NAME);
+
+        try {
+            commands.parse(args);
+        } catch (ParameterException exception) {
+            System.err.println(exception.getMessage());
+            commands.usage();
+            System.exit(1);
+        }
+
+        if (this.help) {
+            commands.usage();
+            System.exit(0);
+        }
+    }
+```
+
+# Question | _Isn't it awesome how all this libraries generate help messages based on your code?!_ {.smaller}
+
+# Welcome to `docopt` {.build}
+
+> Hell no! You know what's awesome? It's when the option parser is generated
+> based on the beautiful help message that you write yourself! This way you
+> don't need to write this stupid repeatable parser-code, and instead can write
+> only the help message--the way you want it.
+
+## Really small API
+
+It only requires a single argument.
+
+```python
+from docopt import docopt
+
+docopt(doc, argv=None, help=True, version=None, options_first=False)
+```
+
+## Working Example
+
+```python
+"""example program
+
+Usage: example.py [--count=N] <path> FILE...
+
+Arguments:
+  FILE     input file
+  PATH     out directory
+
+Options:
+  -h --help         Show this screen.
+  -v, --version     Show version.
+  --count=N         Number of operations [default: 10].
+"""
+from docopt import docopt
+
+if __name__ == '__main__':
+    args = docopt(__doc__, version = "example 1.0")
+
+    for file in args['FILE']:
+        print(file)
+```
+
+# References
+
+- [argp](https://www.gnu.org/software/libc/manual/html_node/Argp.html)
+- [JCommander](https://jcommander.org/)
+- [docopt](http://docopt.org/)

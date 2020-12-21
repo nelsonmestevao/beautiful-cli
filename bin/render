@@ -1,0 +1,29 @@
+#!/usr/bin/env Rscript
+
+if (!requireNamespace("docopt", quietly = TRUE)){
+    install.packages("docopt")
+}
+
+library(docopt)
+
+'
+Usage:
+  bin/render [--format=<type>, --output=<file>]
+  bin/render (-h | --help)
+  bin/render --version
+
+Options:
+  -h --help          Show this screen.
+  --version          Show version.
+  --format=<type>    Document format output [default: ioslides_presentation].
+  --output=<file>    Document name output [default: index.html].
+
+' -> doc
+
+arguments <- docopt(doc, version = 'bin/render 1.0')
+
+rmarkdown::render("presentation.Rmd"
+                 , output_format = arguments$'--format'
+                 , output_dir = "public"
+                 , output_file = arguments$'--output')
+
